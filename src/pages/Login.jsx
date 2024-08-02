@@ -1,26 +1,35 @@
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
 import { logIn } from "../auth";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
-    setError("");
-    try {
-      await logIn(email, password);
-      navigate("/");
-    } catch (error) {
-      setError(error.message);
-    }
+  const initialValues = {
+    email: "",
+    password: "",
   };
 
-  const handleSignupNavigation = () => {
-    navigate("/signup");
+  const validationSchema = Yup.object({
+    email: Yup.string()
+      .email("Invalid email format")
+      .required("Email is required"),
+    password: Yup.string()
+      .min(8, "Password must be at least 8 characters long")
+      .required("Password is required"),
+  });
+
+  const onSubmit = async (values, { setSubmitting, setErrors }) => {
+    try {
+      await logIn(values.email, values.password);
+      navigate("/");
+    } catch (error) {
+      setErrors({ apiError: "Failed to log in: " + error.message });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -29,52 +38,70 @@ const LoginPage = () => {
         <h2 className="text-2xl font-semibold text-gray-800 mb-4 text-center">
           Login
         </h2>
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="email"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
-              placeholder="Enter your email"
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="password"
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
-              placeholder="Enter your password"
-            />
-          </div>
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-          >
-            Login
-          </button>
-        </form>
+        <Formik
+          initialValues={initialValues}
+          validationSchema={validationSchema}
+          onSubmit={onSubmit}
+        >
+          {({ isSubmitting, errors }) => (
+            <Form>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="email"
+                >
+                  Email
+                </label>
+                <Field
+                  type="email"
+                  id="email"
+                  name="email"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
+                  placeholder="Enter your email"
+                />
+                <ErrorMessage
+                  name="email"
+                  component="div"
+                  className="text-red-500 text-sm"
+                />
+              </div>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="password"
+                >
+                  Password
+                </label>
+                <Field
+                  type="password"
+                  id="password"
+                  name="password"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
+                  placeholder="Enter your password"
+                />
+                <ErrorMessage
+                  name="password"
+                  component="div"
+                  className="text-red-500 text-sm"
+                />
+              </div>
+              {errors.apiError && (
+                <p className="text-red-500 text-sm mb-4">{errors.apiError}</p>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Logging in..." : "Login"}
+              </button>
+            </Form>
+          )}
+        </Formik>
         <div className="text-center mt-4">
           <p className="text-gray-600">
-            Don't have an account?{" "}
             <button
-              onClick={handleSignupNavigation}
+              onClick={() => navigate("/signup")}
               className="text-blue-600 hover:underline focus:outline-none"
             >
               Sign up
